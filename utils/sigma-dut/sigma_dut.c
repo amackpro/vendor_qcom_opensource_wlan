@@ -836,6 +836,8 @@ static void set_defaults(struct sigma_dut *dut)
 	dut->write_stats = 1;
 	dut->priv_cmd = "iwpriv";
 	dut->sigma_tmpdir = SIGMA_TMPDIR;
+	dut->ap_ocvc = -1;
+	dut->ap_sae_commit_status = -1;
 }
 
 
@@ -855,6 +857,12 @@ static void deinit_sigma_dut(struct sigma_dut *dut)
 	dut->dpp_peer_uri = NULL;
 	free(dut->ap_sae_passwords);
 	dut->ap_sae_passwords = NULL;
+	free(dut->ap_sae_pk_modifier);
+	dut->ap_sae_pk_modifier = NULL;
+	free(dut->ap_sae_pk_keypair);
+	dut->ap_sae_pk_keypair = NULL;
+	free(dut->ap_sae_pk_keypair_sig);
+	dut->ap_sae_pk_keypair_sig = NULL;
 	free(dut->ar_ltf);
 	dut->ar_ltf = NULL;
 	free(dut->ap_dpp_conf_addr);
@@ -967,7 +975,7 @@ static void print_license(void)
 
 static void usage(void)
 {
-	printf("usage: sigma_dut [-aABdfGqDIntuVW23] [-p<port>] "
+	printf("usage: sigma_dut [-aABdfGqDIntuVW234] [-p<port>] "
 	       "[-s<sniffer>] [-m<set_maccaddr.sh>] \\\n"
 	       "       [-M<main ifname>] [-R<radio ifname>] "
 	       "[-S<station ifname>] [-P<p2p_ifname>]\\\n"
@@ -996,6 +1004,7 @@ static void usage(void)
 	       "       [-z <client socket directory path \\\n"
 	       "       Ex: </data/vendor/wifi/sockets>] \\\n"
 	       "       [-Z <Override default tmp dir path>] \\\n"
+	       "       [-5 <WFD timeout override>] \\\n"
 	       "       [-r <HT40 or 2.4_HT40>]\n");
 	printf("local command: sigma_dut [-p<port>] <-l<cmd>>\n");
 }
@@ -1019,7 +1028,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qQr:R:s:S:tT:uv:VWw:x:y:z:23");
+			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qQr:R:s:S:tT:uv:VWw:x:y:z:Z:2345:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1223,6 +1232,24 @@ int main(int argc, char *argv[])
 		case '3':
 			sigma_dut.owe_ptk_workaround = 1;
 			break;
+		case '4':
+			sigma_dut.client_privacy_default = 1;
+			break;
+		case '5': {
+			int timeout;
+
+			errno = 0;
+			timeout = strtol(optarg, NULL, 10);
+			if (errno || timeout < 0) {
+				sigma_dut_print(&sigma_dut, DUT_MSG_ERROR,
+					       "failed to set default_timeout");
+				return -1;
+			}
+			sigma_dut_print(&sigma_dut, DUT_MSG_INFO,
+					"default timeout set to %d", timeout);
+			sigma_dut.user_config_timeout = timeout;
+			break;
+		}
 		case 'h':
 		default:
 			usage();
@@ -1247,6 +1274,13 @@ int main(int argc, char *argv[])
 
 	if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
 		get_nl80211_config_enable_option(&sigma_dut);
+
+	sigma_dut_get_device_driver_name(get_main_ifname(&sigma_dut),
+					 sigma_dut.device_driver,
+					 sizeof(sigma_dut.device_driver));
+	if (sigma_dut.device_driver[0])
+		sigma_dut_print(&sigma_dut, DUT_MSG_DEBUG, "device driver: %s",
+				sigma_dut.device_driver);
 
 #ifdef NL80211_SUPPORT
 	sigma_dut.nl_ctx = nl80211_init(&sigma_dut);

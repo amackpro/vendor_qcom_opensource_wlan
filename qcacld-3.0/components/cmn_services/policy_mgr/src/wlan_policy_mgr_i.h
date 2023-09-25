@@ -41,8 +41,6 @@
 #define PM_5_GHZ_CH_FREQ_36   (5180)
 #define CHANNEL_SWITCH_COMPLETE_TIMEOUT   (2000)
 
-#define DUAL_MAC_CONFIG_TIMEOUT   (POLICY_MGR_SER_CMD_TIMEOUT + 1000)
-
 /**
  * Policy Mgr hardware mode list bit-mask definitions.
  * Bits 4:0, 31:29 are unused.
@@ -277,6 +275,7 @@ struct policy_mgr_cfg {
 	uint32_t vdev_priority_list;
 	uint32_t chnl_select_plcy;
 	uint8_t go_force_scc;
+	uint8_t sap_only_allow_sta_dfs_indoor_chan;
 	enum policy_mgr_pcl_band_priority pcl_band_priority;
 	uint32_t prefer_5g_scc_to_dbs;
 };
@@ -307,9 +306,6 @@ struct policy_mgr_cfg {
  *                        regulatory/other considerations
  * @sap_mandatory_channels_len: Length of the SAP mandatory
  *                            channel list
- * @do_hw_mode_change: Flag to check if HW mode change is needed
- *                   after vdev is up. Especially used after
- *                   channel switch related vdev restart
  * @concurrency_mode: active concurrency combination
  * @no_of_open_sessions: Number of active vdevs
  * @no_of_active_sessions: Number of active connections
@@ -335,8 +331,6 @@ struct policy_mgr_cfg {
  * @user_config_sap_ch_freq: SAP channel freq configured by user application
  * @cfg: Policy manager config data
  * @dynamic_mcc_adaptive_sched: disable/enable mcc adaptive scheduler feature
- * @dual_mac_configuration_complete_evt: qdf event to synchronize dual mac
- *					 configuration setting
  */
 struct policy_mgr_psoc_priv_obj {
 	struct wlan_objmgr_psoc *psoc;
@@ -352,7 +346,6 @@ struct policy_mgr_psoc_priv_obj {
 	struct policy_mgr_dp_cbacks dp_cbacks;
 	uint32_t sap_mandatory_channels[NUM_CHANNELS];
 	uint32_t sap_mandatory_channels_len;
-	bool do_hw_mode_change;
 	bool do_sap_unsafe_ch_check;
 	uint32_t concurrency_mode;
 	uint8_t no_of_open_sessions[QDF_MAX_NO_OF_MODE];
@@ -378,7 +371,6 @@ struct policy_mgr_psoc_priv_obj {
 	uint32_t valid_ch_freq_list[NUM_CHANNELS];
 	uint32_t valid_ch_freq_list_count;
 	bool dynamic_mcc_adaptive_sched;
-	qdf_event_t dual_mac_configuration_complete_evt;
 };
 
 /**
